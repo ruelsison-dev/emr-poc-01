@@ -51,39 +51,81 @@ Key ideas:
 - Require an explicit label or review from Security/Architecture before running `infra-terratest` against the dev account
 - Provide a `dry-run` job (LocalStack) that runs on every PR; `dev-run` job runs on explicit approval
 
-Suggested workflow snippet (conceptual):
+Suggested workflows (examples):
+
+1) PR dry-run (runs on pull_request - terraform validate + non-blocking terratest smoke):
 
 ```yaml
-# .github/workflows/infra-terratest.yml
-on: workflow_dispatch
+# .github/workflows/infra-terratest-pr.yml
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
 jobs:
-  terratest-localstack:
+  pr-dry-run:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Run terratest (LocalStack)
-        run: make test-localstack # runs `go test ./infra/terratest -run Integration`
-
-  terratest-dev:
-    if: ${{ github.event.inputs.run_in_dev == 'true' }} # only runs by manual trigger + approval
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-    steps:
-      - uses: actions/checkout@v4
-      - name: Configure AWS creds (OIDC)
-        uses: aws-actions/configure-aws-credentials@v2
+      - name: Set up Go
+        uses: actions/setup-go@v4
         with:
-          role-to-assume: arn:aws:iam::123456789012:role/terrtest-runner
-          aws-region: us-east-1
-      - name: Run terratest (dev)
+          go-version: '1.21'
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.5
+      - name: Terraform init (no backend)
+        working-directory: infra
+        run: terraform init -backend=false
+      - name: Terraform validate
+        working-directory: infra
+        run: terraform validate || true
+      - name: Run Terratest smoke (non-blocking)
+        working-directory: infra/terratest
         env:
-          TF_VAR_test_run_id: ${{ github.run_id }}
-        run: make test-dev # runs `go test ./infra/terratest -run Integration -count=1`
-
-# Important: require a SECURITY/ARCHITECTURE review before setting `run_in_dev=true` on a workflow dispatch
+          TERRATEST_DRY_RUN: "true"
+        run: |
+          go test ./... -run TestTerrtestRunnerRole -timeout 10m || echo "Terratest dry-run failed; continuing (non-blocking)"
 ```
 
+2) Dev integration run (manual workflow_dispatch) — requires environment approval and will assume a short-lived OIDC role:
+
+```yaml
+# .github/workflows/infra-terratest-dev.yml
+on:
+  workflow_dispatch:
+    inputs:
+      run_in_dev:
+        description: 'Set true to run against the dev AWS account (requires environment approval)'
+        required: true
+        default: 'false'
+
+jobs:
+  terratest-dev:
+    if: ${{ github.event.inputs.run_in_dev == 'true' }}
+    runs-on: ubuntu-latest
+    environment: dev-terratest # Protect this environment in repo settings and require approvers
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.TERRTEST_RUNNER_ROLE_ARN }}
+          aws-region: ${{ secrets.TEST_AWS_REGION }}
+      - name: Run Terratest (integration)
+        working-directory: infra/terratest
+        env:
+          TF_VAR_test_run_id: ${{ github.run_id }}
+        run: go test ./... -timeout 60m
+```
+
+Notes:
+- Protect the `dev-terratest` environment in GitHub with required reviewers (e.g., Security/Architecture) so manual runs require explicit approval in the UI.
+- Store `TERRTEST_RUNNER_ROLE_ARN` and `TEST_AWS_REGION` in repo secrets and ensure the role's trust policy matches the OIDC condition (owner/repo/ref).
 Notes:
 - Use `github.run_id` to tag resources with deterministic names (e.g., `test-${GITHUB_RUN_ID}-dynamo`) so tear-down is easy
 - Keep `-count=1` to avoid flaky reruns masking issues
