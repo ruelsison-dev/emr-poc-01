@@ -66,10 +66,30 @@ func TestFhirInfra_EncryptionAndPolicies(t *testing.T) {
 
 	// KMS key
 	kmsClient := kms.NewFromConfig(cfg)
-	keyArn := kms
 	resp, err := kmsClient.DescribeKey(ctx, &kms.DescribeKeyInput{KeyId: aws.String(kms)})
 	require.NoError(t, err)
 	require.Equal(t, kmsTypes.KeyStateEnabled, resp.KeyMetadata.KeyState)
+
+	// KMS key policy - ensure there is a default policy with statements
+	kp, err := kmsClient.GetKeyPolicy(ctx, &kms.GetKeyPolicyInput{KeyId: aws.String(kms), PolicyName: aws.String("default")})
+	require.NoError(t, err)
+	require.NotEmpty(t, aws.ToString(kp.Policy))
+	require.Contains(t, aws.ToString(kp.Policy), "Statement")
+
+	// S3 encryption
+	s3Client := s3.NewFromConfig(cfg)
+	encrypt, err := s3Client.GetBucketEncryption(ctx, &s3.GetBucketEncryptionInput{Bucket: aws.String(bucket)})
+	require.NoError(t, err)
+	require.NotEmpty(t, encrypt.ServerSideEncryptionConfiguration.Rules)
+	require.Equal(t, s3types.ServerSideEncryptionAwsKms, encrypt.ServerSideEncryptionConfiguration.Rules[0].ApplyServerSideEncryptionByDefault.SSEAlgorithm)
+
+	// S3 Public Access Block - ensure public access is blocked
+	pab, err := s3Client.GetPublicAccessBlock(ctx, &s3.GetPublicAccessBlockInput{Bucket: aws.String(bucket)})
+	require.NoError(t, err)
+	require.True(t, pab.PublicAccessBlockConfiguration.BlockPublicAcls)
+	require.True(t, pab.PublicAccessBlockConfiguration.BlockPublicPolicy)
+	require.True(t, pab.PublicAccessBlockConfiguration.IgnorePublicAcls)
+	require.True(t, pab.PublicAccessBlockConfiguration.RestrictPublicBuckets)
 
 	// IAM role existence and policy attachment
 	iamClient := iam.NewFromConfig(cfg)
