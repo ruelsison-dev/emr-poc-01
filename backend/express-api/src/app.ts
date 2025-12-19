@@ -4,6 +4,7 @@ import rateLimit from 'express-rate-limit';
 
 import patientsRouter from './routes/patients';
 import appointmentsRouter from './routes/appointments';
+import adminRouter from './routes/admin';
 
 const app = express();
 app.use(helmet());
@@ -17,6 +18,7 @@ app.use(
 
 app.use('/patients', patientsRouter);
 app.use('/appointments', appointmentsRouter);
+app.use('/admin', adminRouter);
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
