@@ -11,9 +11,11 @@
 
 ## Technical Context
 
-**Language/Version**: Node.js **20.x (LTS)** with **TypeScript** (primary runtime for the web application / REST APIs). This follows the user request to generate the front-end web application and REST APIs using **ExpressJS**.
-**Primary Dependencies**: ExpressJS (with TypeScript), Zod or Joi for request validation, Helmet, express-rate-limit, Winston/pino for structured logging, AWS SDK v3, TypeORM or Prisma (Postgres ORM), Jest + Supertest for tests, Pact for contract testing, ESLint/Prettier, Snyk/npm audit for dependency security.
-**Storage**: Amazon Aurora (PostgreSQL) for registries and transactional data; Amazon S3 (SSE-KMS) for exports and blobs; ElastiCache (Redis) for caching and locks; SQS for async jobs and DLQs.
+**Language/Version**: Node.js **20.x (LTS)** with **TypeScript** for the ExpressJS frontend/API and **Go 1.21** for the FHIR backend (gin-gonic/gin). Both runtimes will coexist; Architecture approval required for mixed-runtime approach.
+**Primary Dependencies**: 
+- Frontend/API: ExpressJS (with TypeScript), Zod or Joi, Helmet, express-rate-limit, pino, Prisma/TypeORM, Jest + Supertest, Pact, ESLint/Prettier, Snyk.
+- FHIR Backend: Go 1.21, gin-gonic/gin, aws-sdk-go-v2, go-redis (if needed), testify for testing.
+**Storage**: For FHIR resources we will use **Amazon DynamoDB** (with server-side encryption using AWS KMS) for primary FHIR document/record storage and **Amazon S3 (SSE-KMS)** for document exports and large artifacts. Express/Node services will continue to use Aurora Postgres and Redis for registry and scheduling where appropriate; cross-service integration will be via REST and SQS for async events.
 **Testing**: Unit tests (Jest), integration tests (Supertest + local DB via Docker), contract tests (Pact), IaC tests (Terratest), policy-as-code (Conftest/OPA), security scanning (Snyk/npm audit, dependency-check), DAST in CI.
 **Target Platform / Deployment**: AWS ECS (Fargate) or AWS App Runner as primary long-running runtime pattern (containerized). Lambdas may be used for lightweight async tasks where appropriate. Deploy with Terraform modules, ECS service definition, and ALB/NLB in private subnets.
 **Project Type**: Web application + API (ExpressJS acts as API server and can serve server-side rendered pages or static front-end assets if needed). Consider a separate SPA (React/Next.js) for richer client UI in Phase 1 if desired.

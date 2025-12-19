@@ -42,8 +42,8 @@ description: "Task list for Patient Administration Sub-System"
 
 ### Tests for User Story 1 (must be written first)
 
-- [ ] T011 [P] [US1] Unit tests for registry models and validation (tests/unit/test_registry_*.py)
-- [ ] T012 [P] [US1] Contract tests for Registry API endpoints (tests/contract/test_registry_api.py)
+- [ ] T011 [P] [US1] Unit tests for registry models and validation (tests/unit/test_registry_*.py / backend/express-api/src/tests)
+- [ ] T012 [P] [US1] Contract tests for Registry API endpoints (Pact)
 - [ ] T013 [P] [US1] Integration tests for booking lifecycle and conflict resolution (tests/integration/test_booking_lifecycle.py)
 
 ### Implementation for User Story 1
@@ -58,6 +58,27 @@ description: "Task list for Patient Administration Sub-System"
 - [ ] T019 [US1] Add basic admin UI or lightweight server-rendered endpoints for manual scheduling and conflict resolution (optional)
 - [ ] T019a Create Pact contract tests for all public endpoints and add CI validation
 - [ ] T019b Add Snyk/npm audit and DAST step to CI for Node services (blocking for production deploys)
+
+## Phase 3b: FHIR Backend (Go) - Integration
+
+**Goal**: Provide a FHIR-compatible backend for standardized health data exchange (DynamoDB + S3) and secure storage of documents, with Express frontend consuming these APIs.
+
+### Tests for FHIR Backend (must be written first)
+
+- [ ] T020 Unit tests for basic handlers and validation (Go: testify)
+- [ ] T021 Integration tests for DynamoDB read/write, S3 upload (localstack in CI)
+- [ ] T022 Contract tests (Pact) between Express frontend and Go FHIR backend
+
+### Implementation for FHIR Backend
+
+- [ ] T023 Initialize `backend/fhir-service-go` skeleton (Go 1.21, gin, aws-sdk-go-v2, README, Dockerfile) — (scaffolded)
+- [ ] T024 Implement DynamoDB access patterns for FHIR resources (table schemas, PK/GSIs, TTL) and ensure server-side KMS encryption configuration in IaC
+- [ ] T025 Implement S3 exports with SSE-KMS for document storage and signed URLs for secure downloads
+- [ ] T026 Add integration tests using LocalStack (DynamoDB, S3 emulation) and CI integration
+- [ ] T027 Add IAM least-privilege policies for service role and KMS key policies (IaC module)
+- [ ] T028 Add Pact contract tests and CI validation between `backend/express-api` and `backend/fhir-service-go`
+- [ ] T029 Add Snyk/govulncheck and DAST (for Express) /go vet/gosec static checks for Go service
+
 **Checkpoint**: US1 should be functional and testable independently
 
 ---
