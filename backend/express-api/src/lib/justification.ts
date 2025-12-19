@@ -12,7 +12,8 @@ export interface JustificationRecord {
   timestamp?: string;
 }
 
-const EVIDENCE_DIR = path.join(__dirname, '..', '..', '..', 'specs', '001-patient-admin', 'docs', 'compliance_evidence', 'mfa');
+const EVIDENCE_DIR = process.env.EVIDENCE_DIR || path.join(process.cwd(), 'specs', '001-patient-admin', 'docs', 'compliance_evidence', 'mfa');
+// Use process.cwd() so tests and runtime agree on the evidence path (ts-jest can change __dirname resolution)
 
 export async function recordJustification(rec: JustificationRecord) {
   try {
@@ -23,7 +24,8 @@ export async function recordJustification(rec: JustificationRecord) {
     // ensure evidence dir
     await fs.promises.mkdir(EVIDENCE_DIR, { recursive: true });
     const filename = `justification-${Date.now()}.json`;
-    await fs.promises.writeFile(path.join(EVIDENCE_DIR, filename), JSON.stringify(payload, null, 2), { encoding: 'utf-8' });
+    const filepath = path.join(EVIDENCE_DIR, filename);
+    await fs.promises.writeFile(filepath, JSON.stringify(payload, null, 2), { encoding: 'utf-8' });
     // Additionally, log to stdout for aggregator ingestion
     console.log('JUSTIFICATION_RECORD', JSON.stringify(payload));
   } catch (err) {
