@@ -1,0 +1,44 @@
+name: Integration - LocalStack
+
+on:
+  push:
+    branches: [ "001-patient-admin" ]
+  pull_request:
+    branches: [ "main", "001-patient-admin" ]
+  workflow_dispatch:
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    services:
+      localstack:
+        image: localstack/localstack:latest
+        ports:
+          - 4566:4566
+        options: >-
+          --health-cmd "curl -f http://localhost:4566/_localstack/health || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_ENDPOINT_URL: http://localhost:4566
+    steps:
+      - uses: actions/checkout@v4
+      - name: Wait for LocalStack
+        run: |
+          until curl -sS http://localhost:4566/health | grep "running"; do echo "waiting..."; sleep 2; done
+      - name: Run Go integration tests
+        run: |
+          cd backend/fhir-service-go
+          go test ./... -v -run TestDynamoAndS3Integration
+        env:
+          AWS_REGION: us-east-1
+          AWS_ENDPOINT_URL: http://localhost:4566
+          AWS_ACCESS_KEY_ID: test
+          AWS_SECRET_ACCESS_KEY: test
+      - name: Run Node integration tests (placeholder)
+        run: |
+          echo "Node integration tests will run here (if present)"
