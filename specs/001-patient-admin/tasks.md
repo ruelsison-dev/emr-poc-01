@@ -48,13 +48,16 @@ description: "Task list for Patient Administration Sub-System"
 
 ### Implementation for User Story 1
 
-- [ ] T014 [P] [US1] Implement `registry-service` models and CRUD endpoints (services/registry-service/src)
-- [ ] T015 [P] [US1] Implement `scheduling-service` booking APIs and conflict detection (services/scheduling-service/src)
-- [ ] T016 [US1] Implement idempotency and transactional safety for booking operations
-- [ ] T017 [US1] Add audit logging hooks for create/modify/delete/read actions (centralized logging)
-- [ ] T018 [US1] Implement resource allocation and locking (Redis + DB coordination)
-- [ ] T019 [US1] Add basic UI or admin endpoints for manual scheduling and conflict resolution (optional lightweight UI)
-
+- [ ] T014 [P] [US1] Initialize `backend/express-api` skeleton (TypeScript, ESLint, Prettier, Jest) and add developer quickstart
+- [ ] T014a [P] [US1] Implement registry CRUD endpoints for Patient, Person, Location, Organization (backend/express-api/src/controllers)
+- [ ] T014b [P] [US1] Implement Appointment, Schedule, Slot, and Encounter endpoints (including OpenAPI contract generation)
+- [ ] T015 [P] [US1] Implement booking APIs, reservation token flows (hold/TTL), and conflict detection with background reconciliation (Redis holds + DB coordination)
+- [ ] T016 [US1] Implement idempotency and transactional safety for booking operations (idempotency keys and retries)
+- [ ] T017 [US1] Add audit logging hooks for create/modify/delete/read actions (centralized logging to CloudWatch/aggregator)
+- [ ] T018 [US1] Implement resource allocation and locking (Redis + DB coordination) and include Terratest coverage for modules
+- [ ] T019 [US1] Add basic admin UI or lightweight server-rendered endpoints for manual scheduling and conflict resolution (optional)
+- [ ] T019a Create Pact contract tests for all public endpoints and add CI validation
+- [ ] T019b Add Snyk/npm audit and DAST step to CI for Node services (blocking for production deploys)
 **Checkpoint**: US1 should be functional and testable independently
 
 ---
