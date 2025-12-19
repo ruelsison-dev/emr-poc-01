@@ -1,0 +1,21 @@
+name: CI - FHIR Go Service
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+      - name: Build
+        run: |
+          cd backend/fhir-service-go
+          go build ./...
+      - name: Run tests
+        run: |
+          cd backend/fhir-service-go
+          go test ./... -v

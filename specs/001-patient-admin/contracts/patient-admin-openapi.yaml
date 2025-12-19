@@ -1,0 +1,241 @@
+openapi: 3.0.3
+info:
+  title: Patient Administration API
+  version: 0.1.0
+  description: REST contract for Patient Administration (registries and scheduling)
+servers:
+  - url: https://api.example.com
+paths:
+  /patients:
+    post:
+      summary: Create patient
+      tags: [Patient]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatientCreate'
+      responses:
+        '201':
+          description: Created
+    get:
+      summary: Search patients
+      parameters:
+        - in: query
+          name: q
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+  /patients/{id}:
+    get:
+      summary: Get patient
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+    put:
+      summary: Update patient
+    delete:
+      summary: Delete patient
+
+  /persons:
+    post:
+      summary: Create person
+      tags: [Person]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PersonCreate'
+      responses:
+        '201':
+          description: Created
+    get:
+      summary: Search persons
+      parameters:
+        - in: query
+          name: q
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+  /locations:
+    get:
+      summary: List locations
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Create location
+  /organizations:
+    get:
+      summary: List organizations
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Create organization
+
+  /encounters:
+    post:
+      summary: Create encounter
+      tags: [Encounter]
+    get:
+      summary: Query encounters
+
+  /appointments:
+    post:
+      summary: Create appointment (request)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppointmentCreate'
+      responses:
+        '201':
+          description: Created
+    get:
+      summary: List appointments
+      parameters:
+        - in: query
+          name: patient_id
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: provider_id
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+  /appointments/{id}:
+    get:
+      summary: Get appointment
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+    put:
+      summary: Update appointment
+    delete:
+      summary: Cancel appointment
+
+  /schedules:
+    post:
+      summary: Create schedule (availability)
+    get:
+      summary: List schedules
+  /schedules/{id}/slots:
+    get:
+      summary: List slots for a schedule
+    post:
+      summary: Create or generate slots
+
+  /slots/{id}:
+    get:
+      summary: Get slot
+    put:
+      summary: Update slot (hold/book/cancel)
+
+  /questionnaires:
+    post:
+      summary: Create questionnaire
+    get:
+      summary: List questionnaires
+
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: https://idp.example.com/auth
+          tokenUrl: https://idp.example.com/token
+          scopes:
+            export:read: Read export resources
+  schemas:
+    PatientCreate:
+      type: object
+      properties:
+        primary_person_id:
+          type: string
+          format: uuid
+        mrn:
+          type: string
+      required: [primary_person_id]
+    PersonCreate:
+      type: object
+      properties:
+        given_name:
+          type: string
+        family_name:
+          type: string
+      required: [given_name, family_name]
+    AppointmentCreate:
+      type: object
+      properties:
+        patient_id:
+          type: string
+          format: uuid
+        provider_id:
+          type: string
+          format: uuid
+        start_time:
+          type: string
+          format: date-time
+        end_time:
+          type: string
+          format: date-time
+      required: [patient_id, provider_id, start_time, end_time]
+    Slot:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        start_time:
+          type: string
+          format: date-time
+        end_time:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [free, held, booked, unavailable]
+    Consent:
+      type: object
+      properties:
+        purpose:
+          type: string
+        channel:
+          type: string
+          enum: [email, sms, in_app]
+        granted_at:
+          type: string
+          format: date-time
+        revoked_at:
+          type: string
+          format: date-time
+      required: [purpose, channel, granted_at]
+security:
+  - oauth2: [export:read]
