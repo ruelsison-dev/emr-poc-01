@@ -1,0 +1,57 @@
+name: Infra Terratest (Dev run - requires approval)
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_in_dev:
+        description: 'Set true to run against the dev AWS account (requires environment approval)'
+        required: true
+        default: 'false'
+
+jobs:
+  terratest-dev:
+    if: ${{ github.event.inputs.run_in_dev == 'true' }}
+    runs-on: ubuntu-latest
+    environment: dev-terratest # This environment should be protected with required reviewers/approvals in repo settings
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.TERRTEST_RUNNER_ROLE_ARN }}
+          aws-region: ${{ secrets.TEST_AWS_REGION }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: Run Terratest (integration)
+        working-directory: infra/terratest
+        env:
+          AWS_REGION: ${{ secrets.TEST_AWS_REGION }}
+          TF_VAR_test_run_id: ${{ github.run_id }}
+        run: |
+          echo "Running Terratest integration suite against dev account"
+          go test ./... -timeout 60m
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: terratest-dev-artifacts-${{ github.run_id }}
+          path: infra/terratest/*.log || true
+
+      - name: Post result comment
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = `Terratest dev run completed for run ${process.env.GITHUB_RUN_ID}. Review artifacts and ensure Security sign-off before promoting changes.`
+            github.rest.issues.createComment({ issue_number: context.issue.number || context.payload.pull_request.number, owner: context.repo.owner, repo: context.repo.repo, body })
